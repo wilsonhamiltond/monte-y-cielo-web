@@ -200,7 +200,9 @@ jobs:
               exit 1
             fi
 
-            code=$(curl -sk -o /dev/null -w '%{http_code}' --resolve "$HOST:443:127.0.0.1" "https://$HOST/es" || true)
+            # No -k: the certificate must match $HOST, or nginx is serving another site's
+            # vhost (which may also return 200) instead of this one.
+            code=$(curl -s -o /dev/null -w '%{http_code}' --resolve "$HOST:443:127.0.0.1" "https://$HOST/es" || true)
             if [ "$code" = "200" ]; then echo "nginx serving the app (200)"; exit 0; fi
             echo "nginx did not return 200 - last status: ${code:-no response}"
             sudo -n nginx -t 2>&1 || true
