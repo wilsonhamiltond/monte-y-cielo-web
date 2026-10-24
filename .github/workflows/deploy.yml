@@ -24,7 +24,7 @@ env:
   REMOTE_STORAGE: /opt/monte-y-cielo-web/storage
   SERVICE: monte-y-cielo-web
   APP_PORT: '3001'
-  SITE_HOST: www.monteycieloapartments.com
+  SITE_HOST: www.monteycieloaparments.com
 
 jobs:
   deploy:

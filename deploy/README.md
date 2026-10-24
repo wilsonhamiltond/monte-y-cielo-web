@@ -4,7 +4,7 @@
 push to `main` (or manually via **Actions → Deploy Web → Run workflow**).
 
 The app needs a **Node process on the server**: `next start`, managed by the `monte-y-cielo-web`
-systemd unit, listening on `127.0.0.1:3001`, with nginx reverse-proxying `www.monteycieloapartments.com`
+systemd unit, listening on `127.0.0.1:3001`, with nginx reverse-proxying `www.monteycieloaparments.com`
 to it. Port 3001 (not 3000) so it can share a box with another Node app.
 
 Each deploy lands in `/opt/monte-y-cielo-web/releases/<commit-sha>` (with `node_modules` installed
@@ -80,10 +80,10 @@ sudo systemctl daemon-reload
 sudo systemctl enable monte-y-cielo-web
 
 # 5. TLS first. The site config terminates HTTPS and redirects all HTTP to it, so nginx will not
-#    load it until the certificate exists. DNS for www.monteycieloapartments.com (and the apex)
+#    load it until the certificate exists. DNS for www.monteycieloaparments.com (and the apex)
 #    must resolve to this box first.
 sudo systemctl enable --now nginx
-sudo certbot certonly --nginx -d www.monteycieloapartments.com -d monteycieloapartments.com
+sudo certbot certonly --nginx -d www.monteycieloaparments.com -d monteycieloaparments.com
 
 # 6. Now the cert exists — install the site config.
 #    Amazon Linux / RHEL:
@@ -128,7 +128,7 @@ The certificate is obtained in step 5, and `nginx-monte-y-cielo-web.conf` termin
 301-redirects HTTP → HTTPS (and apex → www). certbot installs a systemd timer that renews unattended.
 
 ```bash
-curl -sI http://www.monteycieloapartments.com | grep -i location   # -> https://www.monteycieloapartments.com/
+curl -sI http://www.monteycieloaparments.com | grep -i location   # -> https://www.monteycieloaparments.com/
 ```
 
 ## Rolling back
@@ -178,7 +178,7 @@ exists (step 6 before step 5). Move the config aside, reload nginx, get the cert
 ```bash
 sudo mv /etc/nginx/conf.d/monte-y-cielo-web.conf /tmp/
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot certonly --nginx -d www.monteycieloapartments.com -d monteycieloapartments.com
+sudo certbot certonly --nginx -d www.monteycieloaparments.com -d monteycieloaparments.com
 sudo mv /tmp/monte-y-cielo-web.conf /etc/nginx/conf.d/
 sudo nginx -t && sudo systemctl reload nginx
 ```
