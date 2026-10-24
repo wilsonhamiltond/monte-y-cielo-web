@@ -1,0 +1,229 @@
+name: Deploy Web
+
+# Builds the Next.js app and ships it to the server over SSH, where a systemd service runs
+# `next start` and nginx reverse-proxies to it. Each release lands in its own directory with
+# production deps installed there, `current` is atomically repointed, and the service restarts.
+#
+# Uploaded photos and property edits live in a persistent STORAGE_DIR on the server, outside the
+# releases, so deploys never touch them. The public pages are prerendered at build time from
+# storage/*.json, so the build first pulls those indexes from the server.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-monte-y-cielo-web
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+  # Releases live here; `current` is the symlink the systemd unit's WorkingDirectory points at.
+  REMOTE_ROOT: /opt/monte-y-cielo-web
+  # Persistent photo storage; must match STORAGE_DIR in /etc/monte-y-cielo-web.env on the server.
+  REMOTE_STORAGE: /opt/monte-y-cielo-web/storage
+  SERVICE: monte-y-cielo-web
+  APP_PORT: '3001'
+  SITE_HOST: www.monteycieloapartments.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # WHATSAPP_NUMBER comes from the GitHub `prod` environment. The public pages are prerendered,
+      # so the number is baked into their HTML at build time; the server's env file must match.
+      # Variable wins; falls back to a Secret.
+      - name: Resolve WhatsApp number
+        id: whatsapp
+        env:
+          VAR_NUMBER: ${{ vars.WHATSAPP_NUMBER }}
+          SECRET_NUMBER: ${{ secrets.WHATSAPP_NUMBER }}
+        run: |
+          set -euo pipefail
+          NUMBER="${VAR_NUMBER:-$SECRET_NUMBER}"
+          if [ -z "$NUMBER" ]; then
+            echo "::error::WHATSAPP_NUMBER is not set. Add it under Settings > Environments > prod (Variables or Secrets)."
+            exit 1
+          fi
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+
+      # Plain ssh rather than a third-party action: one less dependency, and nothing tied to a
+      # deprecated Node runtime. Writes a `deploy-target` alias so later steps carry no host/port.
+      - name: Configure SSH
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+
+          missing=""
+          [ -z "$KEY" ]         && missing="$missing DEPLOY_SSH_KEY"
+          [ -z "$HOST" ]        && missing="$missing DEPLOY_HOST"
+          [ -z "$DEPLOY_USER" ] && missing="$missing DEPLOY_USER"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing secret(s):$missing - add them to the prod environment under Settings > Environments."
+            exit 1
+          fi
+
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+
+          # printf, not echo: the key must end in a newline or ssh rejects it as malformed.
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null 2>&1; then
+            echo "::error::DEPLOY_SSH_KEY is not a valid private key. Paste the whole PEM, including the BEGIN and END lines."
+            exit 1
+          fi
+
+          if [ -n "$KNOWN_HOSTS" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "::warning::DEPLOY_KNOWN_HOSTS not set - accepting the host key unverified."
+            ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 600 ~/.ssh/known_hosts
+
+          cat > ~/.ssh/config <<EOF
+          Host deploy-target
+            HostName $HOST
+            User $DEPLOY_USER
+            Port $PORT
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            ServerAliveInterval 30
+          EOF
+          chmod 600 ~/.ssh/config
+
+          ssh -o BatchMode=yes deploy-target 'echo "SSH OK as $(whoami) on $(hostname)"'
+
+      # The /es, /en and /fr pages are prerendered at build time from photos.json and
+      # properties.json, so build against the live indexes or the site ships without photos.
+      # Only the JSON is needed; the images themselves are served from disk at request time.
+      - name: Pull storage indexes
+        run: |
+          set -euo pipefail
+          mkdir -p storage
+          for f in photos.json properties.json; do
+            if ssh deploy-target "test -f '${{ env.REMOTE_STORAGE }}/$f'"; then
+              scp -q "deploy-target:${{ env.REMOTE_STORAGE }}/$f" "storage/$f"
+              echo "pulled $f"
+            else
+              echo "::warning::$f not found on the server - building without it."
+            fi
+          done
+
+      - name: Build
+        env:
+          WHATSAPP_NUMBER: ${{ steps.whatsapp.outputs.number }}
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          set -euo pipefail
+          test -f .next/BUILD_ID || { echo "::error::.next/BUILD_ID missing - did next build run?"; exit 1; }
+          echo "build id: $(cat .next/BUILD_ID)"
+
+      - name: Upload release
+        run: |
+          set -euo pipefail
+          RELEASE="${{ env.REMOTE_ROOT }}/releases/${GITHUB_SHA}"
+          ssh deploy-target "mkdir -p '$RELEASE'"
+          # Ship the build plus what `next start` reads (config, tsconfig, public/) and the
+          # manifests needed to install production deps on the server. The build cache stays here.
+          rsync -az --delete --exclude '.next/cache' \
+            .next public package.json package-lock.json next.config.ts tsconfig.json \
+            "deploy-target:$RELEASE/"
+
+      - name: Install production dependencies
+        run: |
+          set -euo pipefail
+          # Non-login ssh has a minimal PATH; match the systemd unit's PATH so a system-wide
+          # node is found. nvm-only installs live in ~/.nvm and will not work with the service
+          # either — install node system-wide (see deploy/README.md). Installing on the server
+          # also fetches the right sharp binary for its CPU (x64 or arm64).
+          ssh deploy-target bash -euo pipefail <<EOF
+            export PATH="/usr/local/bin:/usr/bin:\$PATH"
+            command -v npm >/dev/null || { echo "npm not on PATH - install node system-wide (see deploy/README.md)"; exit 1; }
+            cd '${{ env.REMOTE_ROOT }}/releases/${GITHUB_SHA}'
+            npm ci --omit=dev --no-audit --no-fund
+          EOF
+
+      - name: Activate
+        run: |
+          set -euo pipefail
+          ssh deploy-target bash -euo pipefail <<EOF
+            ROOT='${{ env.REMOTE_ROOT }}'
+            RELEASE="\$ROOT/releases/${GITHUB_SHA}"
+
+            # Symlink swap is atomic via -T, so a restart never sees a half-updated directory.
+            ln -sfn "\$RELEASE" "\$ROOT/current.new"
+            mv -T "\$ROOT/current.new" "\$ROOT/current"
+
+            # Restart the service (WorkingDirectory follows the current symlink).
+            sudo systemctl restart ${{ env.SERVICE }}
+          EOF
+
+      - name: Verify site responds
+        run: |
+          set -euo pipefail
+          # / redirects to a language, so probe /es directly.
+          ssh deploy-target bash -euo pipefail <<'EOF'
+            PORT='${{ env.APP_PORT }}'
+            SERVICE='${{ env.SERVICE }}'
+            HOST='${{ env.SITE_HOST }}'
+
+            # First the Node app directly, then through nginx on the public vhost.
+            for i in $(seq 1 20); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/es" || true)
+              if [ "$code" = "200" ]; then echo "Next.js server up (200)"; break; fi
+              sleep 1
+            done
+            if [ "${code:-}" != "200" ]; then
+              echo "Next.js server did not return 200 - last status: ${code:-no response}"
+              sudo -n systemctl status "$SERVICE" --no-pager -l 2>&1 | tail -n 30 || true
+              journalctl -u "$SERVICE" -n 40 --no-pager 2>/dev/null || true
+              exit 1
+            fi
+
+            code=$(curl -sk -o /dev/null -w '%{http_code}' --resolve "$HOST:443:127.0.0.1" "https://$HOST/es" || true)
+            if [ "$code" = "200" ]; then echo "nginx serving the app (200)"; exit 0; fi
+            echo "nginx did not return 200 - last status: ${code:-no response}"
+            sudo -n nginx -t 2>&1 || true
+            sudo -n tail -n 30 /var/log/nginx/error.log 2>/dev/null || true
+            exit 1
+          EOF
+
+      # Housekeeping must never fail a deploy that is already live and serving.
+      - name: Prune old releases
+        continue-on-error: true
+        run: |
+          ssh deploy-target bash -euo pipefail <<EOF
+            cd '${{ env.REMOTE_ROOT }}/releases'
+            CURRENT=\$(basename "\$(readlink -f '${{ env.REMOTE_ROOT }}/current')")
+
+            mapfile -t old < <(ls -1t)
+            kept=0
+            for dir in "\${old[@]}"; do
+              if [ "\$dir" = "\$CURRENT" ]; then continue; fi
+              kept=\$((kept + 1))
+              if [ "\$kept" -le 5 ]; then continue; fi
+              echo "pruning \$dir"
+              rm -rf -- "\$dir"
+            done
+            echo "kept \$kept release(s) plus the live one"
+          EOF

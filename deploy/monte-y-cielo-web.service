@@ -1,0 +1,30 @@
+# Runs the Next.js server (next start) for monte-y-cielo-web.
+# Install to /etc/systemd/system/monte-y-cielo-web.service — see deploy/README.md.
+#
+# WorkingDirectory points at the `current` symlink the deploy repoints each release,
+# so `systemctl restart monte-y-cielo-web` picks up the new build. The Node process
+# listens on 127.0.0.1:3001 and nginx reverse-proxies to it.
+
+[Unit]
+Description=Monte y Cielo Web (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=monteycielo
+Group=monteycielo
+WorkingDirectory=/opt/monte-y-cielo-web/current
+Environment=NODE_ENV=production
+Environment=NEXT_TELEMETRY_DISABLED=1
+# ADMIN_PASSWORD, SESSION_SECRET, WHATSAPP_NUMBER and STORAGE_DIR (root-only file).
+EnvironmentFile=/etc/monte-y-cielo-web.env
+# npm and node must be on PATH; adjust if node lives elsewhere (e.g. NodeSource /usr/bin).
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+# env resolves npm via PATH, so this works whether node is in /usr/bin or /usr/local/bin.
+ExecStart=/usr/bin/env npm run start -- -H 127.0.0.1 -p 3001
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

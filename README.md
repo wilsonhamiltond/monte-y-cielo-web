@@ -51,6 +51,8 @@ src/
 
 ## Deployment
 
+Production runs at **www.monteycieloapartments.com**. Every push to `main` deploys through GitHub Actions (`.github/workflows/deploy.yml`) to a server running `next start` behind nginx. Server setup, secrets and rollback are in [`deploy/README.md`](deploy/README.md).
+
 Uploaded photos are stored **on the server's disk**, so the app needs a Node.js host with a **persistent disk**:
 
 - a VPS (Hostinger VPS, DigitalOcean, Lightsail…) with `npm run build && npm start` behind Nginx or Caddy, or
