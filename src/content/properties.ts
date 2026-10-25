@@ -34,45 +34,6 @@ const MONTE_Y_CIELO_MAP = mapsUrl(19.253683, -69.192589);
 
 export const PROPERTIES: Property[] = [
   {
-    id: "apto-1",
-    guests: 2,
-    bedrooms: 1,
-    bathrooms: 1,
-    mapUrl: MONTE_Y_CIELO_MAP,
-    text: {
-      es: {
-        type: "Apartamento",
-        name: "Monte y Cielo 1",
-        summary: "Apartamento para dos en Samaná, con balcón y acceso a la piscina.",
-        description:
-          "Apartamento de 1 habitación y 1 baño con cocina, sala de estar y balcón, rodeado de naturaleza. Incluye acceso a la piscina, patio y parqueo privado. Ideal para parejas.",
-        price: "Consultar precio",
-        amenities: ["Cocina", "Sala de estar", "Balcón", "Acceso a la piscina", "Patio", "Parqueo privado"],
-        rules: ["Máximo 2 personas"],
-      },
-      en: {
-        type: "Apartment",
-        name: "Monte y Cielo 1",
-        summary: "Apartment for two in Samaná, with a balcony and pool access.",
-        description:
-          "1-bedroom, 1-bathroom apartment with a kitchen, living room and balcony, surrounded by nature. Includes pool access, a patio and private parking. Ideal for couples.",
-        price: "Price on request",
-        amenities: ["Kitchen", "Living room", "Balcony", "Pool access", "Patio", "Private parking"],
-        rules: ["Maximum 2 guests"],
-      },
-      fr: {
-        type: "Appartement",
-        name: "Monte y Cielo 1",
-        summary: "Appartement pour deux à Samaná, avec balcon et accès à la piscine.",
-        description:
-          "Appartement d'une chambre et une salle de bain avec cuisine, salon et balcon, en pleine nature. Accès à la piscine, patio et parking privé. Idéal pour les couples.",
-        price: "Prix sur demande",
-        amenities: ["Cuisine", "Salon", "Balcon", "Accès à la piscine", "Patio", "Parking privé"],
-        rules: ["2 personnes maximum"],
-      },
-    },
-  },
-  {
     id: "apto-2",
     guests: 2,
     bedrooms: 1,
@@ -81,7 +42,7 @@ export const PROPERTIES: Property[] = [
     text: {
       es: {
         type: "Apartamento",
-        name: "Monte y Cielo 2",
+        name: "Monte y Cielo 1",
         summary: "Apartamento para dos en Samaná, con balcón y acceso a la piscina.",
         description:
           "Apartamento de 1 habitación y 1 baño con cocina, sala de estar y balcón, con vista a las montañas y al mar. Incluye acceso a la piscina, patio y parqueo privado. Ideal para parejas.",
@@ -91,7 +52,7 @@ export const PROPERTIES: Property[] = [
       },
       en: {
         type: "Apartment",
-        name: "Monte y Cielo 2",
+        name: "Monte y Cielo 1",
         summary: "Apartment for two in Samaná, with a balcony and pool access.",
         description:
           "1-bedroom, 1-bathroom apartment with a kitchen, living room and balcony, with views of the mountains and the sea. Includes pool access, a patio and private parking. Ideal for couples.",
@@ -101,10 +62,49 @@ export const PROPERTIES: Property[] = [
       },
       fr: {
         type: "Appartement",
-        name: "Monte y Cielo 2",
+        name: "Monte y Cielo 1",
         summary: "Appartement pour deux à Samaná, avec balcon et accès à la piscine.",
         description:
           "Appartement d'une chambre et une salle de bain avec cuisine, salon et balcon, avec vue sur les montagnes et la mer. Accès à la piscine, patio et parking privé. Idéal pour les couples.",
+        price: "Prix sur demande",
+        amenities: ["Cuisine", "Salon", "Balcon", "Accès à la piscine", "Patio", "Parking privé"],
+        rules: ["2 personnes maximum"],
+      },
+    },
+  },
+  {
+    id: "apto-1",
+    guests: 2,
+    bedrooms: 1,
+    bathrooms: 1,
+    mapUrl: MONTE_Y_CIELO_MAP,
+    text: {
+      es: {
+        type: "Apartamento",
+        name: "Monte y Cielo 2",
+        summary: "Apartamento para dos en Samaná, con balcón y acceso a la piscina.",
+        description:
+          "Apartamento de 1 habitación y 1 baño con cocina, sala de estar y balcón, rodeado de naturaleza. Incluye acceso a la piscina, patio y parqueo privado. Ideal para parejas.",
+        price: "Consultar precio",
+        amenities: ["Cocina", "Sala de estar", "Balcón", "Acceso a la piscina", "Patio", "Parqueo privado"],
+        rules: ["Máximo 2 personas"],
+      },
+      en: {
+        type: "Apartment",
+        name: "Monte y Cielo 2",
+        summary: "Apartment for two in Samaná, with a balcony and pool access.",
+        description:
+          "1-bedroom, 1-bathroom apartment with a kitchen, living room and balcony, surrounded by nature. Includes pool access, a patio and private parking. Ideal for couples.",
+        price: "Price on request",
+        amenities: ["Kitchen", "Living room", "Balcony", "Pool access", "Patio", "Private parking"],
+        rules: ["Maximum 2 guests"],
+      },
+      fr: {
+        type: "Appartement",
+        name: "Monte y Cielo 2",
+        summary: "Appartement pour deux à Samaná, avec balcon et accès à la piscine.",
+        description:
+          "Appartement d'une chambre et une salle de bain avec cuisine, salon et balcon, en pleine nature. Accès à la piscine, patio et parking privé. Idéal pour les couples.",
         price: "Prix sur demande",
         amenities: ["Cuisine", "Salon", "Balcon", "Accès à la piscine", "Patio", "Parking privé"],
         rules: ["2 personnes maximum"],
