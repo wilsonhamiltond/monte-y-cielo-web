@@ -14,7 +14,7 @@ const es = {
   },
   properties: {
     title: "Nuestros alojamientos",
-    subtitle: "2 apartamentos y 2 casas. Toca una tarjeta para ver fotos y detalles.",
+    subtitle: "3 apartamentos y 1 casa. Toca una tarjeta para ver fotos y detalles.",
     guests: "huéspedes",
     bedrooms: "habitaciones",
     bedroomsShort: "hab.",
@@ -62,7 +62,7 @@ const en: Dictionary = {
   },
   properties: {
     title: "Our stays",
-    subtitle: "2 apartments and 2 houses. Tap a card to see photos and details.",
+    subtitle: "3 apartments and 1 house. Tap a card to see photos and details.",
     guests: "guests",
     bedrooms: "bedrooms",
     bedroomsShort: "bd.",
@@ -108,7 +108,7 @@ const fr: Dictionary = {
   },
   properties: {
     title: "Nos logements",
-    subtitle: "2 appartements et 2 maisons. Touchez une carte pour voir les photos et les détails.",
+    subtitle: "3 appartements et 1 maison. Touchez une carte pour voir les photos et les détails.",
     guests: "voyageurs",
     bedrooms: "chambres",
     bedroomsShort: "ch.",
