@@ -4,7 +4,7 @@ import { cacheLife } from "next/cache";
 import { isLocale, localeLabels, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { SITE, whatsappUrl } from "@/content/site";
-import { getPhotoIndex, photoUrl } from "@/lib/photos";
+import { getPhotoIndex, photoSrcSet, photoUrl } from "@/lib/photos";
 import { getProperties } from "@/lib/properties";
 import { PropertyGallery, type PropertyView } from "@/components/PropertyGallery";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
@@ -35,6 +35,8 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
       photos: (photoIndex[property.id] ?? []).map((photo) => ({
         full: photoUrl(property.id, photo, "full"),
         thumb: photoUrl(property.id, photo, "thumb"),
+        small: photoUrl(property.id, photo, "small"),
+        srcSet: photoSrcSet(property.id, photo),
       })),
       bookUrl: whatsappUrl(t.whatsapp.property.replace("{name}", text.name)),
     };
@@ -43,6 +45,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   // The hero uses SITE.heroImage, or else the last property's cover photo.
   const heroPhoto =
     SITE.heroImage ?? [...properties].reverse().find((property) => property.photos.length)?.photos[0].full;
+  const heroSrcSet = SITE.heroImage ? SITE.heroSrcSet : undefined;
 
   return (
     <>
@@ -87,7 +90,13 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
           <div className="hero-arch">
             {heroPhoto ? (
               // eslint-disable-next-line @next/next/no-img-element -- photos are resized to WebP on upload
-              <img src={heroPhoto} alt="" fetchPriority="high" />
+              <img
+                src={heroPhoto}
+                srcSet={heroSrcSet}
+                sizes="(max-width: 760px) calc(min(78vw, 340px) - 20px), 440px"
+                alt=""
+                fetchPriority="high"
+              />
             ) : (
               <span className="shutters" />
             )}

@@ -7,7 +7,13 @@ import { WhatsAppIcon } from "./WhatsAppIcon";
 export interface PhotoView {
   full: string;
   thumb: string;
+  small: string;
+  /** Small and thumbnail variants, for the card photo. */
+  srcSet: string;
 }
+
+// Card photo width per the .doors grid in site.css: 1, 2 or 4 columns, minus padding.
+const CARD_SIZES = "(max-width: 640px) calc(100vw - 52px), (max-width: 1100px) calc(50vw - 72px), 238px";
 
 export interface PropertyView {
   id: string;
@@ -72,12 +78,20 @@ export function PropertyGallery({ properties, labels }: Props) {
       <div className="doors">
         {properties.map((property) => (
           <article className="door" key={property.id}>
-            <button className="door-arch" onClick={() => open(property.id)} aria-label={`${labels.details}: ${property.name}`}>
+            {/* No aria-label: the name comes from the photo's alt plus the visible photo count,
+                so what screen readers announce matches what is on screen. */}
+            <button className="door-arch" onClick={() => open(property.id)}>
               {property.photos.length ? (
                 // eslint-disable-next-line @next/next/no-img-element -- photos are resized to WebP on upload
-                <img src={property.photos[0].thumb} alt={property.name} loading="lazy" />
+                <img
+                  src={property.photos[0].thumb}
+                  srcSet={property.photos[0].srcSet}
+                  sizes={CARD_SIZES}
+                  alt={`${labels.details}: ${property.name}`}
+                  loading="lazy"
+                />
               ) : (
-                <span className="shutters">
+                <span className="shutters" role="img" aria-label={`${labels.details}: ${property.name}`}>
                   <span className="shutters-note">{labels.noPhotos}</span>
                 </span>
               )}
@@ -149,7 +163,7 @@ export function PropertyGallery({ properties, labels }: Props) {
                   {current.photos.map((photo, i) => (
                     <button key={photo.thumb} className={i === index ? "active" : undefined} onClick={() => setIndex(i)} aria-label={`${i + 1}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element -- photos are resized to WebP on upload */}
-                      <img src={photo.thumb} alt="" loading="lazy" />
+                      <img src={photo.small} alt="" loading="lazy" />
                     </button>
                   ))}
                 </div>

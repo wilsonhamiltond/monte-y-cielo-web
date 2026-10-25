@@ -2,7 +2,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import sharp from "sharp";
+import sharp, { type Sharp } from "sharp";
 import { cacheLife, cacheTag } from "next/cache";
 import { isPropertyId, type PropertyId } from "@/content/properties";
 
@@ -11,6 +11,8 @@ import { isPropertyId, type PropertyId } from "@/content/properties";
  *   STORAGE_DIR/photos.json                       ordered photo list per property
  *   STORAGE_DIR/uploads/<property>/<id>.webp       full size (max 2000px)
  *   STORAGE_DIR/uploads/<property>/<id>_thumb.webp thumbnail (max 600px)
+ *   STORAGE_DIR/uploads/<property>/<id>_sm.webp    small thumbnail (max 320px), made from
+ *                                                  the thumbnail on first request if missing
  */
 export interface Photo {
   id: string;
@@ -30,7 +32,10 @@ const UPLOADS_DIR = path.join(STORAGE_DIR, "uploads");
 const INDEX_FILE = path.join(STORAGE_DIR, "photos.json");
 const FULL_SIZE = 2000;
 const THUMB_SIZE = 600;
-const FILE_NAME = /^[0-9a-f-]{36}(_thumb)?\.webp$/;
+const SMALL_SIZE = 320;
+const FILE_NAME = /^[0-9a-f-]{36}(_thumb|_sm)?\.webp$/;
+const VARIANT_SUFFIX = { full: "", thumb: "_thumb", small: "_sm" } as const;
+export type PhotoVariant = keyof typeof VARIANT_SUFFIX;
 
 async function readIndex(): Promise<PhotoIndex> {
   try {
@@ -74,19 +79,39 @@ export async function getPhotoIndexFresh(): Promise<PhotoIndex> {
   return readIndex();
 }
 
-export function photoUrl(propertyId: PropertyId, photo: Photo, variant: "full" | "thumb"): string {
-  return `/uploads/${propertyId}/${photo.id}${variant === "thumb" ? "_thumb" : ""}.webp`;
+export function photoUrl(propertyId: PropertyId, photo: Photo, variant: PhotoVariant): string {
+  return `/uploads/${propertyId}/${photo.id}${VARIANT_SUFFIX[variant]}.webp`;
 }
 
+const VARIANT_MAX: Record<PhotoVariant, number> = { full: FULL_SIZE, thumb: THUMB_SIZE, small: SMALL_SIZE };
+
+/**
+ * srcset of the small and thumbnail variants for photos cropped with object-fit: cover in a
+ * square-ish box. Each variant is described by its short side, the dimension that has to fill
+ * the box, so the browser never picks one that ends up upscaled.
+ */
+export function photoSrcSet(propertyId: PropertyId, photo: Photo): string {
+  const shortSide = (variant: PhotoVariant) =>
+    Math.round(Math.min(photo.width, photo.height) * Math.min(1, VARIANT_MAX[variant] / Math.max(photo.width, photo.height)));
+  return (["small", "thumb"] as const).map((variant) => `${photoUrl(propertyId, photo, variant)} ${shortSide(variant)}w`).join(", ");
+}
+
+/** Full, thumbnail and small file paths, in that order. */
 function photoFiles(propertyId: PropertyId, id: string): string[] {
   const dir = path.join(UPLOADS_DIR, propertyId);
-  return [path.join(dir, `${id}.webp`), path.join(dir, `${id}_thumb.webp`)];
+  return Object.values(VARIANT_SUFFIX).map((suffix) => path.join(dir, `${id}${suffix}.webp`));
+}
+
+function encodeSmall(input: Buffer | Sharp): Promise<Buffer> {
+  const image = Buffer.isBuffer(input) ? sharp(input) : input;
+  return image.resize(SMALL_SIZE, SMALL_SIZE, { fit: "inside", withoutEnlargement: true }).webp({ quality: 72 }).toBuffer();
 }
 
 /** Resizes, strips metadata, converts to WebP and appends the photo to the property. */
 export async function addPhoto(propertyId: PropertyId, input: Buffer): Promise<Photo> {
   const id = randomUUID();
-  const [fullPath, thumbPath] = photoFiles(propertyId, id);
+  const files = photoFiles(propertyId, id);
+  const [fullPath, thumbPath, smallPath] = files;
   await fs.mkdir(path.dirname(fullPath), { recursive: true });
 
   try {
@@ -103,8 +128,10 @@ export async function addPhoto(propertyId: PropertyId, input: Buffer): Promise<P
       .resize(THUMB_SIZE, THUMB_SIZE, { fit: "inside", withoutEnlargement: true })
       .webp({ quality: 75 })
       .toBuffer();
+    const small = await encodeSmall(image.clone());
     await fs.writeFile(fullPath, full.data);
     await fs.writeFile(thumbPath, thumb);
+    await fs.writeFile(smallPath, small);
 
     const photo: Photo = { id, width: full.info.width, height: full.info.height, createdAt: new Date().toISOString() };
     await mutateIndex((index) => {
@@ -112,7 +139,7 @@ export async function addPhoto(propertyId: PropertyId, input: Buffer): Promise<P
     });
     return photo;
   } catch (error) {
-    await Promise.all([fullPath, thumbPath].map((file) => fs.rm(file, { force: true })));
+    await Promise.all(files.map((file) => fs.rm(file, { force: true })));
     throw error;
   }
 }
@@ -146,4 +173,31 @@ export function resolveUploadPath(segments: string[]): string | null {
   const [propertyId, fileName] = segments;
   if (!isPropertyId(propertyId) || !FILE_NAME.test(fileName)) return null;
   return path.join(UPLOADS_DIR, propertyId, fileName);
+}
+
+/**
+ * Reads an uploaded file. Photos uploaded before the small variant existed get it made
+ * from their thumbnail on first request, then saved so later requests read it from disk.
+ */
+export async function readUpload(file: string): Promise<Buffer | null> {
+  try {
+    return await fs.readFile(file);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT" || !file.endsWith("_sm.webp")) return null;
+  }
+
+  let small: Buffer;
+  try {
+    small = await encodeSmall(await fs.readFile(file.replace(/_sm\.webp$/, "_thumb.webp")));
+  } catch {
+    return null;
+  }
+  // Write then rename, so a parallel request never reads a half-written file. A failed save
+  // (e.g. a read-only disk) still serves the image.
+  const tmp = `${file}.${randomUUID()}.tmp`;
+  await fs
+    .writeFile(tmp, small)
+    .then(() => fs.rename(tmp, file))
+    .catch(() => fs.rm(tmp, { force: true }));
+  return small;
 }

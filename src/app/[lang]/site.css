@@ -97,13 +97,18 @@ h1, h2, h3 { font-variation-settings: var(--display); font-weight: 800; line-hei
   --shutter: var(--ocre);
   position: relative; aspect-ratio: 3 / 4; max-height: 620px; width: 100%; justify-self: end;
   padding: 14px 14px 0; background: var(--buganvilla); border-radius: var(--arch);
-  animation: door-open .9s cubic-bezier(.2, .7, .2, 1) both;
+}
+/* Reveal from the bottom up with a cover that shrinks away, not by clipping the arch:
+   a clipped image only counts as painted for LCP once the animation ends. */
+.hero-arch::after {
+  content: ""; position: absolute; inset: -1px; background: var(--anil); pointer-events: none;
+  transform-origin: top; animation: door-open .9s cubic-bezier(.2, .7, .2, 1) both;
 }
 .hero-arch > * { border-radius: var(--arch); }
 .hero-arch img { width: 100%; height: 100%; object-fit: cover; }
-@keyframes door-open { from { clip-path: inset(100% 0 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes door-open { from { transform: scaleY(1); } to { transform: scaleY(0); } }
 @media (prefers-reduced-motion: reduce) {
-  .hero-arch { animation: none; }
+  .hero-arch::after { display: none; }
   html { scroll-behavior: auto; }
 }
 @media (max-width: 760px) {

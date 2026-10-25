@@ -20,9 +20,11 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
   return {
     title: `${SITE.brandName} — ${t.meta.title}`,
     description: t.meta.description,
+    // Resolves the relative URLs below: search engines want absolute canonical/hreflang links.
+    metadataBase: new URL(SITE.url),
     alternates: {
       canonical: `/${lang}`,
-      languages: Object.fromEntries(locales.map((locale) => [locale, `/${locale}`])),
+      languages: { ...Object.fromEntries(locales.map((locale) => [locale, `/${locale}`])), "x-default": "/es" },
     },
     openGraph: { title: `${SITE.brandName} — ${t.meta.title}`, description: t.meta.description, locale: lang },
   };
