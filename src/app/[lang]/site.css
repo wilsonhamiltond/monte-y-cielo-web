@@ -64,8 +64,6 @@ h1, h2, h3 { font-variation-settings: var(--display); font-weight: 800; line-hei
 .btn-wa:hover { background: var(--wa-deep); }
 .btn-ocre { background: var(--ocre); color: var(--anil-deep); }
 .btn-ocre:hover { background: #f0b552; }
-.btn-line { border-color: rgba(242, 244, 247, .55); color: var(--cal); }
-.btn-line:hover { border-color: var(--cal); background: rgba(242, 244, 247, .08); }
 .btn-quiet { background: transparent; border-color: var(--cal-deep); color: var(--anil); }
 .btn-quiet:hover { border-color: var(--anil); }
 .btn-lg { padding: 16px 30px; font-size: 1.1rem; }
@@ -82,39 +80,59 @@ h1, h2, h3 { font-variation-settings: var(--display); font-weight: 800; line-hei
   padding: 6px 14px; border-radius: 999px; margin: 0 12px; text-align: center;
 }
 
-/* ---------- Hero ---------- */
-.hero { background: var(--anil); color: var(--cal); overflow: hidden; }
-.hero-inner {
-  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
-  align-items: end; gap: 56px; padding-top: 72px;
+/* ---------- Hero: full-width photo banner with the wordmark, details below ---------- */
+.hero-banner {
+  position: relative; display: grid; place-items: center; overflow: hidden;
+  height: clamp(420px, 46vw, 660px); background: var(--persiana);
 }
-.hero-text { padding-bottom: 80px; }
-.hero h1 { font-size: clamp(3rem, 8.5vw, 6.5rem); margin: 0 0 24px; line-height: .92; max-width: 9ch; }
-.hero-tagline { font-size: clamp(1.1rem, 2vw, 1.35rem); margin: 0 0 10px; max-width: 32ch; }
-.hero-loc { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--ocre); font-weight: 600; }
-.hero-actions { margin-top: 36px; display: flex; gap: 12px; flex-wrap: wrap; }
-.hero-arch {
-  --shutter: var(--ocre);
-  position: relative; aspect-ratio: 3 / 4; max-height: 620px; width: 100%; justify-self: end;
-  padding: 14px 14px 0; background: var(--buganvilla); border-radius: var(--arch);
+.hero-banner picture, .hero-banner img, .hero-banner > .shutters { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-banner img { object-fit: cover; object-position: 50% 55%; }
+/* Soft dark-green glow behind the wordmark so it reads on any part of the photo. */
+.hero-banner::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 52% 46% at 50% 48%, rgba(14, 42, 28, .72), rgba(14, 42, 28, .34) 60%, transparent 100%);
 }
-/* Reveal from the bottom up with a cover that shrinks away, not by clipping the arch:
-   a clipped image only counts as painted for LCP once the animation ends. */
-.hero-arch::after {
-  content: ""; position: absolute; inset: -1px; background: var(--anil); pointer-events: none;
-  transform-origin: top; animation: door-open .9s cubic-bezier(.2, .7, .2, 1) both;
+.hero-brand {
+  position: relative; z-index: 1; margin: 0; padding: 0 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  color: #fff; text-shadow: 0 2px 18px rgba(0, 0, 0, .35);
+  animation: brand-in .9s cubic-bezier(.2, .7, .2, 1) both;
 }
-.hero-arch > * { border-radius: var(--arch); }
-.hero-arch img { width: 100%; height: 100%; object-fit: cover; }
-@keyframes door-open { from { transform: scaleY(1); } to { transform: scaleY(0); } }
+.hero-mark { width: clamp(120px, 15vw, 220px); height: auto; filter: drop-shadow(0 2px 8px rgba(0, 0, 0, .3)); }
+.hero-brand-name {
+  display: flex; align-items: center; gap: .3em;
+  font-family: var(--font-brand), Georgia, serif; font-weight: 500; line-height: 1;
+  font-size: clamp(3.2rem, 8.5vw, 7rem); letter-spacing: .01em;
+}
+.hero-brand-name em {
+  font-family: var(--font-script), cursive; font-style: normal; font-size: .82em;
+  margin: .18em -.04em 0; /* the script "y" sits low, with its tail under the baseline */
+}
+/* Thin rules either side of the name, as on the printed logo. */
+.hero-brand-name::before, .hero-brand-name::after {
+  content: ""; width: clamp(40px, 8vw, 130px); height: 2px; background: currentColor; opacity: .85;
+}
+@keyframes brand-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+.hero-info {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center;
+  gap: 24px 64px; padding-top: 64px; padding-bottom: 72px;
+}
+.hero-info h1 { font-size: clamp(2.6rem, 6vw, 4.8rem); margin: 0; line-height: .95; color: var(--anil); max-width: 10ch; }
+.hero-tagline { font-size: clamp(1.1rem, 2vw, 1.3rem); margin: 0 0 12px; max-width: 40ch; }
+.hero-loc { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--muted); font-weight: 600; }
+.hero-loc svg { color: var(--buganvilla); flex: none; }
+.hero-actions { margin-top: 28px; display: flex; gap: 12px; flex-wrap: wrap; }
 @media (prefers-reduced-motion: reduce) {
-  .hero-arch::after { display: none; }
+  .hero-brand { animation: none; }
   html { scroll-behavior: auto; }
 }
 @media (max-width: 760px) {
-  .hero-inner { grid-template-columns: 1fr; gap: 0; padding-top: 40px; }
-  .hero-text { padding-bottom: 40px; }
-  .hero-arch { width: 78%; max-width: 340px; aspect-ratio: 4 / 5; justify-self: center; padding: 10px 10px 0; }
+  .hero-banner { height: min(118vw, 72vh); min-height: 380px; }
+  .hero-banner img { object-position: 50% 50%; }
+  .hero-banner::after { background: radial-gradient(ellipse 80% 40% at 50% 48%, rgba(14, 42, 28, .6), rgba(14, 42, 28, .25) 65%, transparent 100%); }
+  .hero-brand-name::before, .hero-brand-name::after { display: none; }
+  .hero-info { grid-template-columns: 1fr; padding-top: 40px; padding-bottom: 48px; }
   .hero-actions .btn { flex: 1 1 auto; }
 }
 

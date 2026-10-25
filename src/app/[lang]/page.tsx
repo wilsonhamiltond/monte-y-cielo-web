@@ -42,10 +42,11 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
     };
   });
 
-  // The hero uses SITE.heroImage, or else the last property's cover photo.
+  // The banner uses SITE.heroImage, or else the last property's cover photo.
   const heroPhoto =
     SITE.heroImage ?? [...properties].reverse().find((property) => property.photos.length)?.photos[0].full;
   const heroSrcSet = SITE.heroImage ? SITE.heroSrcSet : undefined;
+  const heroMobileSrcSet = SITE.heroImage ? SITE.heroMobileSrcSet : undefined;
 
   return (
     <>
@@ -71,9 +72,25 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
       </header>
 
       <section className="hero">
-        <div className="container hero-inner">
-          <div className="hero-text">
-            <h1>{t.hero.title}</h1>
+        <div className="hero-banner">
+          {heroPhoto ? (
+            <picture>
+              {heroMobileSrcSet && <source media="(max-width: 760px)" srcSet={heroMobileSrcSet} sizes="100vw" />}
+              <img src={heroPhoto} srcSet={heroSrcSet} sizes="100vw" alt="" fetchPriority="high" />
+            </picture>
+          ) : (
+            <span className="shutters" />
+          )}
+          <p className="hero-brand">
+            <MountainCloudMark />
+            <span className="hero-brand-name">
+              Monte <em>y</em> Cielo
+            </span>
+          </p>
+        </div>
+        <div className="container hero-info">
+          <h1>{t.hero.title}</h1>
+          <div>
             <p className="hero-tagline">{t.hero.tagline}</p>
             <p className="hero-loc">
               <PinIcon />
@@ -81,25 +98,11 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
             </p>
             <div className="hero-actions">
               <a href="#alojamientos" className="btn btn-ocre">{t.hero.cta}</a>
-              <a href={generalWhatsApp} className="btn btn-line" target="_blank" rel="noopener">
+              <a href={generalWhatsApp} className="btn btn-wa" target="_blank" rel="noopener">
                 <WhatsAppIcon size={20} />
                 {t.hero.whatsapp}
               </a>
             </div>
-          </div>
-          <div className="hero-arch">
-            {heroPhoto ? (
-              // eslint-disable-next-line @next/next/no-img-element -- photos are resized to WebP on upload
-              <img
-                src={heroPhoto}
-                srcSet={heroSrcSet}
-                sizes="(max-width: 760px) calc(min(78vw, 340px) - 20px), 440px"
-                alt=""
-                fetchPriority="high"
-              />
-            ) : (
-              <span className="shutters" />
-            )}
           </div>
         </div>
       </section>
@@ -161,6 +164,19 @@ function ArchMark() {
   return (
     <svg viewBox="0 0 20 24" width="18" height="22" aria-hidden="true">
       <path d="M2 23V10a8 8 0 0 1 16 0v13" fill="none" stroke="currentColor" strokeWidth="3" />
+    </svg>
+  );
+}
+
+/** Line drawing of a mountain range and a cloud, above the wordmark on the banner. */
+function MountainCloudMark() {
+  return (
+    <svg className="hero-mark" viewBox="0 0 132 40" width="132" height="40" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 37 30 9l10 11 9-9 25 26" />
+        <path d="M24 17l6 4 5-3" />
+        <path d="M86 35h33a8 8 0 0 0 0-16 11 11 0 0 0-21-3 8 8 0 0 0-12 7 6 6 0 0 0 0 12z" />
+      </g>
     </svg>
   );
 }
