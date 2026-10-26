@@ -53,7 +53,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
       <header className="nav">
         <div className="container nav-inner">
           <a href="#" className="logo">
-            <ArchMark />
+            <MountainCloudMark className="logo-mark" strokeWidth={3.6} />
             {SITE.brandName}
           </a>
           <nav className="nav-links">
@@ -82,7 +82,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
             <span className="shutters" />
           )}
           <p className="hero-brand">
-            <MountainCloudMark />
+            <MountainCloudMark className="hero-mark" />
             <span className="hero-brand-name">
               Monte <em>y</em> Cielo
             </span>
@@ -160,19 +160,14 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   );
 }
 
-function ArchMark() {
+/**
+ * Line drawing of a mountain range and a cloud: the logo in the header and above the wordmark
+ * on the banner. Small sizes need a heavier stroke to stay crisp.
+ */
+function MountainCloudMark({ className, strokeWidth = 2.2 }: { className: string; strokeWidth?: number }) {
   return (
-    <svg viewBox="0 0 20 24" width="18" height="22" aria-hidden="true">
-      <path d="M2 23V10a8 8 0 0 1 16 0v13" fill="none" stroke="currentColor" strokeWidth="3" />
-    </svg>
-  );
-}
-
-/** Line drawing of a mountain range and a cloud, above the wordmark on the banner. */
-function MountainCloudMark() {
-  return (
-    <svg className="hero-mark" viewBox="0 0 132 40" width="132" height="40" aria-hidden="true">
-      <g fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={className} viewBox="0 0 132 40" width="132" height="40" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 37 30 9l10 11 9-9 25 26" />
         <path d="M24 17l6 4 5-3" />
         <path d="M86 35h33a8 8 0 0 0 0-16 11 11 0 0 0-21-3 8 8 0 0 0-12 7 6 6 0 0 0 0 12z" />

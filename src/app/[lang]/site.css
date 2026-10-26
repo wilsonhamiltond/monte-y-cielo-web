@@ -40,7 +40,7 @@ h1, h2, h3 { font-variation-settings: var(--display); font-weight: 800; line-hei
   font-size: 1.35rem; font-weight: 800; font-variation-settings: var(--display);
   text-decoration: none; color: var(--anil);
 }
-.logo svg { color: var(--buganvilla); }
+.logo-mark { width: 62px; height: auto; color: var(--buganvilla); flex: none; }
 .nav-links { display: flex; gap: 24px; }
 .nav-links a { text-decoration: none; color: var(--muted); font-weight: 500; font-size: .95rem; }
 .nav-links a:hover { color: var(--anil); }
